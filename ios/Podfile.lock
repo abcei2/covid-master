@@ -1,0 +1,169 @@
+PODS:
+  - audio_graph (0.0.6):
+    - Flutter
+  - audio_streamer (0.0.1):
+    - Flutter
+  - audioplayers (0.0.1):
+    - Flutter
+  - camera (0.0.1):
+    - Flutter
+  - device_id (0.0.1):
+    - Flutter
+  - Flutter (1.0.0)
+  - flutter_audio_capture (0.0.2):
+    - Flutter
+  - flutter_audio_recorder (0.5.4):
+    - Flutter
+  - flutter_jscore (0.0.1):
+    - Flutter
+  - flutter_webview_plugin (0.0.1):
+    - Flutter
+  - FMDB (2.7.5):
+    - FMDB/standard (= 2.7.5)
+  - FMDB/standard (2.7.5)
+  - "geolocator (5.3.2+2)":
+    - Flutter
+  - image_picker (0.0.1):
+    - Flutter
+  - interactive_webview (0.0.1):
+    - Flutter
+  - location (0.0.1):
+    - Flutter
+  - "location_permissions (3.0.0+1)":
+    - Flutter
+  - medcorder_audio (0.0.1):
+    - Flutter
+  - open_file (0.0.1):
+    - Flutter
+  - path_provider (0.0.1):
+    - Flutter
+  - permission (0.0.1):
+    - Flutter
+  - "permission_handler (5.0.1+1)":
+    - Flutter
+  - sound_stream (0.0.1):
+    - Flutter
+  - sqflite (0.0.1):
+    - Flutter
+    - FMDB (~> 2.7.2)
+  - vibration (1.5.0):
+    - Flutter
+  - wakelock (0.0.1):
+    - Flutter
+  - webview_flutter (0.0.1):
+    - Flutter
+
+DEPENDENCIES:
+  - audio_graph (from `.symlinks/plugins/audio_graph/ios`)
+  - audio_streamer (from `.symlinks/plugins/audio_streamer/ios`)
+  - audioplayers (from `.symlinks/plugins/audioplayers/ios`)
+  - camera (from `.symlinks/plugins/camera/ios`)
+  - device_id (from `.symlinks/plugins/device_id/ios`)
+  - Flutter (from `Flutter`)
+  - flutter_audio_capture (from `.symlinks/plugins/flutter_audio_capture/ios`)
+  - flutter_audio_recorder (from `.symlinks/plugins/flutter_audio_recorder/ios`)
+  - flutter_jscore (from `.symlinks/plugins/flutter_jscore/ios`)
+  - flutter_webview_plugin (from `.symlinks/plugins/flutter_webview_plugin/ios`)
+  - geolocator (from `.symlinks/plugins/geolocator/ios`)
+  - image_picker (from `.symlinks/plugins/image_picker/ios`)
+  - interactive_webview (from `.symlinks/plugins/interactive_webview/ios`)
+  - location (from `.symlinks/plugins/location/ios`)
+  - location_permissions (from `.symlinks/plugins/location_permissions/ios`)
+  - medcorder_audio (from `.symlinks/plugins/medcorder_audio/ios`)
+  - open_file (from `.symlinks/plugins/open_file/ios`)
+  - path_provider (from `.symlinks/plugins/path_provider/ios`)
+  - permission (from `.symlinks/plugins/permission/ios`)
+  - permission_handler (from `.symlinks/plugins/permission_handler/ios`)
+  - sound_stream (from `.symlinks/plugins/sound_stream/ios`)
+  - sqflite (from `.symlinks/plugins/sqflite/ios`)
+  - vibration (from `.symlinks/plugins/vibration/ios`)
+  - wakelock (from `.symlinks/plugins/wakelock/ios`)
+  - webview_flutter (from `.symlinks/plugins/webview_flutter/ios`)
+
+SPEC REPOS:
+  trunk:
+    - FMDB
+
+EXTERNAL SOURCES:
+  audio_graph:
+    :path: ".symlinks/plugins/audio_graph/ios"
+  audio_streamer:
+    :path: ".symlinks/plugins/audio_streamer/ios"
+  audioplayers:
+    :path: ".symlinks/plugins/audioplayers/ios"
+  camera:
+    :path: ".symlinks/plugins/camera/ios"
+  device_id:
+    :path: ".symlinks/plugins/device_id/ios"
+  Flutter:
+    :path: Flutter
+  flutter_audio_capture:
+    :path: ".symlinks/plugins/flutter_audio_capture/ios"
+  flutter_audio_recorder:
+    :path: ".symlinks/plugins/flutter_audio_recorder/ios"
+  flutter_jscore:
+    :path: ".symlinks/plugins/flutter_jscore/ios"
+  flutter_webview_plugin:
+    :path: ".symlinks/plugins/flutter_webview_plugin/ios"
+  geolocator:
+    :path: ".symlinks/plugins/geolocator/ios"
+  image_picker:
+    :path: ".symlinks/plugins/image_picker/ios"
+  interactive_webview:
+    :path: ".symlinks/plugins/interactive_webview/ios"
+  location:
+    :path: ".symlinks/plugins/location/ios"
+  location_permissions:
+    :path: ".symlinks/plugins/location_permissions/ios"
+  medcorder_audio:
+    :path: ".symlinks/plugins/medcorder_audio/ios"
+  open_file:
+    :path: ".symlinks/plugins/open_file/ios"
+  path_provider:
+    :path: ".symlinks/plugins/path_provider/ios"
+  permission:
+    :path: ".symlinks/plugins/permission/ios"
+  permission_handler:
+    :path: ".symlinks/plugins/permission_handler/ios"
+  sound_stream:
+    :path: ".symlinks/plugins/sound_stream/ios"
+  sqflite:
+    :path: ".symlinks/plugins/sqflite/ios"
+  vibration:
+    :path: ".symlinks/plugins/vibration/ios"
+  wakelock:
+    :path: ".symlinks/plugins/wakelock/ios"
+  webview_flutter:
+    :path: ".symlinks/plugins/webview_flutter/ios"
+
+SPEC CHECKSUMS:
+  audio_graph: a6b03e49b1298356a3b12766fe4009080c7bc645
+  audio_streamer: af49e73eb66f71c4eeabb4bbcb05f122d03a6709
+  audioplayers: 84f968cea3f2deab00ec4f8ff53358b3c0b3992c
+  camera: 38cc83ae9a5667bb5a71c7d9edaf60a91920fd4e
+  device_id: 4a0bf078741a3eec6ba0e6cc72e786395d5991b0
+  Flutter: 0e3d915762c693b495b44d77113d4970485de6ec
+  flutter_audio_capture: b530f3465e0b806dc8a99336dc03800497686b2e
+  flutter_audio_recorder: eb998d4e75e59b39d9e3ca1818a5e0f3a82f5836
+  flutter_jscore: 376f47fdc53824b2fb89a7cf1be8350b1d9ef7f7
+  flutter_webview_plugin: ed9e8a6a96baf0c867e90e1bce2673913eeac694
+  FMDB: 2ce00b547f966261cd18927a3ddb07cb6f3db82a
+  geolocator: f7622e0e7e2a24718285b73916d60c4a54b9f5b6
+  image_picker: 9c3312491f862b28d21ecd8fdf0ee14e601b3f09
+  interactive_webview: 645deb8ecb0f8564ca2017e691338854c5d6a061
+  location: 3a2eed4dd2fab25e7b7baf2a9efefe82b512d740
+  location_permissions: 7e0f9aa0f60deb8ff93ddf0e2a164c7e8197bc94
+  medcorder_audio: 39016cfc6d8d7eded898ef88dc56984496c7b017
+  open_file: 02eb5cb6b21264bd3a696876f5afbfb7ca4f4b7d
+  path_provider: abfe2b5c733d04e238b0d8691db0cfd63a27a93c
+  permission: c186483e23779d53def6b55986323494927c22c8
+  permission_handler: eac8e15b4a1a3fba55b761d19f3f4e6b005d15b6
+  sound_stream: eba0f2a5994b91d9e5009a739df6e98515a7b44f
+  sqflite: 4001a31ff81d210346b500c55b17f4d6c7589dd0
+  vibration: 64de683387ea8cc822f7b4f1653747bc8ff91662
+  wakelock: 0d4a70faf8950410735e3f61fb15d517c8a6efc4
+  webview_flutter: d2b4d6c66968ad042ad94cbb791f5b72b4678a96
+
+PODFILE CHECKSUM: 8baa96de485bcb0aea5a26510e6a7160d93feee8
+
+COCOAPODS: 1.9.3

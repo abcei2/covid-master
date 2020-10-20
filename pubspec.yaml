@@ -1,0 +1,168 @@
+name: covid
+description: A new Flutter project.
+
+# The following line prevents the package from being accidentally published to
+# pub.dev using `pub publish`. This is preferred for private packages.
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+# The following defines the version and build number for your application.
+# A version number is three numbers separated by dots, like 1.2.43
+# followed by an optional build number separated by a +.
+# Both the version and the builder number may be overridden in flutter
+# build by specifying --build-name and --build-number, respectively.
+# In Android, build-name is used as versionName while build-number used as versionCode.
+# Read more about Android versioning at https://developer.android.com/studio/publish/versioning
+# In iOS, build-name is used as CFBundleShortVersionString while build-number used as CFBundleVersion.
+# Read more about iOS versioning at
+# https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
+version: 1.0.0+1
+
+environment:
+  sdk: ">=2.7.0 <3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intro_slider: ^2.3.1  
+  rflutter_alert: ^1.0.3
+  sqflite: ^1.3.0
+  path_provider: ^1.6.11
+  localstorage: ^3.0.0
+  device_id: ^0.2.0
+  charts_flutter: ^0.9.0
+  wakelock: ^0.1.4+1
+  percent_indicator: ^2.1.5
+  datetime_picker_formfield: ^1.0.0
+  #flutter_js: ^0.0.2+1
+  flutter_webview_plugin: ^0.3.11
+  webview_flutter: ^0.3.22+1
+  interactive_webview: ^0.1.2
+  #audio_recorder: ^1.0.2
+  audio_streamer: ^1.2.0
+  flutter_audio_recorder: ^0.5.5
+  audioplayers: ^0.15.1
+  provider: ^4.3.1
+  basic_utils: ^1.2.0
+  geolocator: ^5.3.2+2
+  #flutter_downloader: ^1.4.4
+  #audiofileplayer: ^1.3.1
+  metadata_fetch: ^0.3.3
+  permission: ^0.1.7
+  dio: ^3.0.9
+  #downloads_path_provider_28: ^0.1.0
+  permission_handler: ^5.0.1+1
+  open_file: ^3.0.1
+  #flutter_sound: ^5.1.1
+  #rename: ^1.2.0
+  buffer: ^1.0.7
+  medcorder_audio: ^0.0.6
+  audio_graph: ^0.0.6
+  flutter_audio_capture: ^0.0.2
+  data_connection_checker: ^0.3.4
+  image_picker: ^0.6.7+4
+  flutter_jscore: ^0.1.1
+  http: ^0.12.2
+  load: ^0.1.6
+  image: ^2.1.14
+  location: ^3.0.2
+  vibration: ^1.4.0
+  flutter_svg: ^0.18.1
+  async_loader: ^0.1.2
+  loading_overlay: ^0.2.1
+  flutter_launcher_icons: ^0.7.5
+  flutter_native_splash: ^0.1.9
+  sound_stream: ^0.2.0
+  camera:
+    path: ./extras/camera
+    #git:
+      #url: https://github.com/Renesanse/plugins.git
+      #path: packages/camera
+      #ref: flash_light
+      
+  # The following adds the Cupertino Icons font to your application.
+  # Use with the CupertinoIcons class for iOS style icons.
+  cupertino_icons: ^0.1.3
+
+flutter_icons:
+  ios: true
+  android: true
+  image_path_ios: "assets/icons/icon_1.png"
+  image_path_android: "assets/icons/icon_1.png"
+  adaptive_icon_background: "#ffffff"
+  #adaptive_icon_foreground: "#ffffff"
+
+flutter_native_splash:
+  image: assets/splash/splash_2.jpg
+  color: "#ffffff"
+  fill: true
+  ios: false
+
+dev_dependencies:
+  flutter_test: 
+    sdk: flutter
+
+# For information on the generic Dart part of this file, see the
+# following page: https://dart.dev/tools/pub/pubspec
+
+# The following section is specific to Flutter.
+flutter:
+
+  # The following line ensures that the Material Icons font is
+  # included with your application, so that you can use the icons in
+  # the material Icons class.
+  uses-material-design: true
+
+  assets:
+      - assets/img/virus.png
+      - assets/img/quarantine.png
+      - assets/img/wash-your-hands.png
+      - assets/img/profile.jpg
+      - assets/img/background.jpeg
+      - resources/liquidcore_sample.js
+      - assets/audio/
+      - assets/audio/prueba.mp3
+      - assets/audio/tono.mp3
+      - assets/audio/audio_stop.mp3
+      - assets/json/red_neuronal.txt
+      - assets/json/respiracion.txt
+      - assets/json/tos.txt
+      - assets/script/js.txt
+      - assets/gif/FCARDIACA.gif
+      - assets/gif/RESP.gif
+      - assets/gif/spinner.gif
+      - assets/gif/spinner.svg
+      - assets/gif/spinner.png
+      - assets/icons/icon_2.png
+
+  # To add assets to your application, add an assets section, like this:
+  # assets:
+  #   - images/a_dot_burr.jpeg
+  #   - images/a_dot_ham.jpeg
+
+  # An image asset can refer to one or more resolution-specific "variants", see
+  # https://flutter.dev/assets-and-images/#resolution-aware.
+
+  # For details regarding adding assets from package dependencies, see
+  # https://flutter.dev/assets-and-images/#from-packages
+
+  # To add custom fonts to your application, add a fonts section here,
+  # in this "flutter" section. Each entry in this list should have a
+  # "family" key with the font family name, and a "fonts" key with a
+  # list giving the asset and other descriptors for the font. For
+  # example:
+  # fonts:
+  #   - family: Schyler
+  #     fonts:
+  #       - asset: fonts/Schyler-Regular.ttf
+  #       - asset: fonts/Schyler-Italic.ttf
+  #         style: italic
+  #   - family: Trajan Pro
+  #     fonts:
+  #       - asset: fonts/TrajanPro.ttf
+  #       - asset: fonts/TrajanPro_Bold.ttf
+  #         weight: 700
+  #
+  # For details regarding fonts from package dependencies,
+  # see https://flutter.dev/custom-fonts/#from-packages

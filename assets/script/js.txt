@@ -1,0 +1,1477 @@
+
+function MainFunction(MuestrasTos,FsTos, MuestrasResp, FsResp, Cuestionario, data_json_string, RitmoCardiaco){
+    let data_json;
+    if(typeof data_json_string =="string" ){
+        try {
+            data_json=JSON.parse(data_json_string)
+            if(!try_json(data_json)){
+                return "JSON WITHOUT NET INFO"
+            }
+        } catch(e) {
+            console.log(e)
+            return "BAD JSON STRING"
+        }
+    }else{
+        return "BAD DATA TYPE"
+    }
+    data_json_string="";
+    let features=Get_features(MuestrasTos,FsTos, MuestrasResp, FsResp, Cuestionario, data_json)
+
+    if(features!=-1){
+
+        let predictions=Predict(features, data_json)
+        let clase= 3.731481+(predictions[0]*(-2.736844))+predictions[1]*(-1.739630)+(predictions[2]*0.287265);
+        if( Math.round(clase)==1)
+            return "NO CONTAGIO";
+        else if (Math.round(clase)==2)
+            return "PROBABILIDAD BAJA";
+        else if  (Math.round(clase)==3)
+            return "PROBABILIDAD MEDIA";
+        else if  (Math.round(clase)==4)
+            return "PROBABILIDAD ALTA";
+        else
+            return "NO CONCLUYE";
+
+    }else{
+        return "BAD DATA TYPE";
+    }
+}
+
+
+
+function Get_features(MuestrasTos,FsTos, MuestrasResp, FsResp, Cuestionario, data_json){
+
+    const Array_is_number = (currentValue) => typeof currentValue == "number";
+
+    if(Array.isArray(MuestrasTos) && Array.isArray(MuestrasResp)  &&
+         Array.isArray(Cuestionario) && typeof FsTos == "number" && typeof FsResp == "number"
+        ){
+
+        if(MuestrasTos.every(Array_is_number) && MuestrasTos.every(Array_is_number)
+        && Cuestionario.every(Array_is_number)){
+            let TosFrames=MuestrasTos.length,
+                TosDuration=TosFrames/FsTos,
+                RespFrames=MuestrasResp.length,
+                RespDuration=RespFrames/FsResp;
+
+            if(TosDuration<=2 && RespDuration<=2){
+                console.log("TO SHORT AUDIO")
+                return -1
+            }
+        }else{
+            console.log("ERROR IN TYPE DATA")
+
+
+            return -1
+        }
+    }else{
+        return -1
+    }
+    MuestrasResp=new Float32Array(MuestrasResp)
+    MuestrasTos=new Float32Array(MuestrasTos)
+
+    let FeaturesAll = ExtractFeatures(MuestrasTos,MuestrasResp,FsResp)
+    Cuestionario=[Cuestionario[7],Cuestionario[19],Cuestionario[21],Cuestionario[23],Cuestionario[20]]
+    let fullfeatures=Cuestionario.concat(FeaturesAll)
+
+    fullfeatures=scaler_function(fullfeatures,data_json,scaler_type="MinMax")
+    return  fullfeatures
+
+}
+
+function ExtractFeatures(MuestrasTos,MuestrasResp,fs){
+    let data=[]
+    let data_fft=[]
+    let b=[0.0065,    0.0130,    0.0065]
+    let a=[1.0000,   -1.7592,    0.7852]
+
+    let features=[];
+    let feature="none";
+    let type="none";
+
+    let autocorr_tos=[]
+    let autocor_tos_ready=false
+
+    let autocorr_resp=[]
+    let autocor_resp_ready=false
+
+    let lpc_tos=[0,0]
+    let lpc_resp=[0,0]
+    const list_features=["mel_p","preder_p","powrate_p","peaks_p","spec_mean_p",
+    "spec_mean_t","linear_t","var_t","powrate_t","peaks_t"]
+
+    MuestrasResp=filtro_butter_z(MuestrasResp,a,b)
+    MuestrasTos=filtro_butter_z(MuestrasTos,a,b)
+
+    let data_fft_tos=full_fft_pre_emphasis(MuestrasTos.slice())
+    let data_fft_resp=full_fft_pre_emphasis(MuestrasResp.slice())
+    for(let i=0; i<list_features.length;i++){
+        feature=list_features[i].slice(0,list_features[i].length-2)
+        type=list_features[i][list_features[i].length-1]
+
+        if(type=='p'){
+            data=MuestrasResp.slice()
+            data_fft=data_fft_resp
+        }else{
+            data=MuestrasTos.slice()
+            data_fft=data_fft_tos
+        }
+
+        switch(feature){
+            case "peaks":
+                features.push(peaks(data.slice(),fs))
+                break;
+            case "powrate":
+                features.push(powrate(data.slice(),fs))
+                break
+
+            case "spec_mean":
+                features.push(spec_mean(data_fft,data.length))
+                break;
+            case "linear":
+                if(type=='p'){
+                    if(autocor_resp_ready){
+                        features.push(lpc_resp[0])
+                    }else{
+                        autocor_resp_ready=true
+                        autocorr_resp=autocorr_lag(data.slice(),20)
+                        lpc_resp=lev_durb(autocorr_resp)
+                        features.push(lpc_tos[0])
+                    }
+                }else{
+                    if(autocor_tos_ready){
+                        features.push(lpc_tos[0])
+                    }else{
+                        autocor_tos_ready=true
+                        autocorr_tos=autocorr_lag(data.slice(),20)
+                        lpc_tos=lev_durb(autocorr_tos)
+                        features.push(lpc_tos[0])
+                    }
+                }
+                break;
+            case "preder":
+                if(type=='p'){
+                    if(autocor_resp_ready){
+                        features.push(lpc_resp[1])
+                    }else{
+                        autocor_resp_ready=true
+                        autocorr_resp=autocorr_lag(data.slice(),20)
+                        lpc_resp=lev_durb(autocorr_resp)
+                        features.push(lpc_resp[1])
+                    }
+                }else{
+                    if(autocor_tos_ready){
+                        features.push(lpc_tos[1])
+                    }else{
+                        autocor_tos_ready=true
+                        autocorr_tos=autocorr_lag(data.slice(),20)
+                        lpc_tos=lev_durb(autocorr_tos)
+                        features.push(lpc_resp[1])
+                    }
+                }
+                break;
+            case "var":
+                features.push(variance(data.slice()))
+                break;
+            case "range":
+                features.push(range(data.slice()))
+                break;
+            case "sma_fine":
+                features.push(sma_fine(data.slice(),4))
+                break;
+            case "mel":
+                features.push(ThirdMfcc(data_fft,fs))
+                break;
+            default:
+                break;
+        }
+
+
+    }
+
+
+    return features;
+}
+
+
+function try_json(var_json){
+    if( var_json["net_w"][0][0].length==15 && var_json["net_w"][0].length==50 && var_json["net_b"][0].length==50){
+        return true
+    }else{
+        return false
+    }
+
+}
+
+function scaler_function(data,scaler,scaler_type){
+
+    switch(scaler_type){
+        case "NormDist":
+            for(let i=0;i<data.length;i++){
+                data[i]=(data[i]-scaler.d_mean[i])/scaler.d_std[i]
+            }
+            return data;
+        case "MaxAbs":
+            for(let i=0;i<data.length;i++){
+                data[i]=data[i]/Math.abs(data[i])
+            }
+            return data;
+        case "MinMax":
+            for(let i=0;i<data.length;i++){
+                data[i]=2*(data[i]-scaler.MIN_SCALER[0][i])/(scaler.MAX_SCALER[0][i]-scaler.MIN_SCALER[0][i])   -1
+            }
+            return data;
+    }
+
+}
+
+function NormaliceDistribution(data){
+    let num_columns=data[0].length;
+    let d_var=new Float32Array(num_columns).fill(0.0)
+    let d_mean=new Float32Array(num_columns).fill(0.0)
+    for(let i=0;i<num_columns;i++){
+
+
+        for(let kk=0;kk<data.length;kk++){
+            d_mean[i]=d_mean[i]+data[kk][i]
+        }
+        d_mean[i]=d_mean[i]/data.length
+
+        for(let kk=0;kk<data.length;kk++){
+            d_var[i]=d_var[i]+(data[kk][i]-d_mean[i])**2
+        }
+
+        d_var[i]=Math.sqrt(d_var[i]/data.length)
+
+
+    }
+    let scaler={
+        "d_var":d_var,
+        "d_mean":d_mean,
+    }
+    return scaler
+}
+
+function maxabs_scale(data){
+    let Maxabs_value=new Float32Array(data[0].length).fill(0.0)
+    for(let i=0;i<data[0].length;i++){
+        for(let kk=0;kk<data.length;kk++){
+            Maxabs_value[i]=Math.max(Maxabs_value[i],Math.abs(data[kk][i]))
+        }
+        for(let kk=0;kk<data.length;kk++){
+            data[kk][i]=data[kk][i]/Maxabs_value[i]
+        }
+    }
+    let scaler={
+        "Maxabs_value":Maxabs_value,
+        "result":data
+    }
+    return scaler
+}
+
+function Predict(inputs, model_weights){
+    let y1;
+    y1=Dense(inputs,
+        model_weights["net_b"][0].length,
+        model_weights["net_w"][0],
+        model_weights["net_b"][0],
+        "TANSIGMOID"
+    )
+    let output=Dense(y1,
+        model_weights["net_b"][1].length,
+        model_weights["net_w"][1],
+        model_weights["net_b"][1],
+        "LOGSIGMOID"
+    );
+    return output;
+}
+
+function Dense(input, num_neurons, weights, bias ,activation_function ){
+    let output=new Float32Array(num_neurons).fill(0.0)
+    for(let i=0;i<num_neurons;i++)
+    {
+        for(let kk=0;kk<input.length;kk++)
+        {
+            output[i]=output[i]+weights[i][kk]*input[kk]
+        }
+        output[i]=output[i]+bias[i]
+    }
+    let softmax_total=1;
+    if(activation_function=="SOFTMAX"){
+        softmax_total=0;
+        for (z in output){
+            softmax_total=softmax_total+Math.exp(output[z])
+        }
+    }
+    for(let i=0;i<num_neurons;i++)    {
+        if(activation_function=="SOFTMAX"){
+            output[i]=activaction_functions(output[i],activation_function,softmax_total)
+
+        }
+        else
+            output[i]=activaction_functions(output[i],activation_function)
+    }
+
+    return output
+}
+
+function activaction_functions(x,activation_function,softmax_total=1){
+    let y=0;
+    switch(activation_function){
+        case "RELU":
+            y=Math.max(0,x)
+            return y
+        case "SIGMOID":
+            y=1 / (1 + Math.exp(-x))
+            return y
+        case "LOGSIGMOID":
+            y=1 / (1 + Math.exp(-x))
+            return y
+        case "TANSIGMOID":
+            y=2/(1+Math.exp(-2*x))-1
+            return y
+        case "SOFTMAX":
+            y=Math.exp(x)/softmax_total
+            return y
+        default:
+            return y
+    }
+
+}
+
+function lev_durb(r){
+    let p = 6
+    let a = new Float64Array(p+1).fill(0.0)
+    a[0] = 1.0
+    let G = new Float64Array(p).fill(0.0)
+    let eps = new Float64Array(p+1).fill(0.0)
+    eps[0] = r[0]
+    let conv=0;
+    let a_cpy;
+    for(let tau=0;tau<p;tau++){
+        conv = r[tau + 1]
+        for(let s=1;s<tau+1;s++)
+            conv = conv + a[s] * r[tau - s + 1]
+        G[tau] = -conv / eps[tau]
+        a_cpy = a.slice()
+        for(let s=1;s<tau+1;s++)
+            a_cpy[s] = a[s] + G[tau] *a[tau - s + 1]
+        a = a_cpy.slice()
+        a[tau + 1] = G[tau]
+        eps[tau + 1] = eps[tau] * (1 - Math.abs(G[tau])**2)
+
+    }
+    return [a[1],eps[eps.length-1]]
+
+}
+
+function peaks(signal,fs){
+    let signal_envelope=norm_cuadratic_signal(signal.slice())
+    let win=0.1
+    let step=0.01
+    signal_envelope=short_time_energy(signal_envelope.slice(),win*fs,step*fs)
+
+    let min_sound_value=max_array(signal_envelope)*0.05;
+    let win2=0.2
+    let fsnew=fs*(signal_envelope.length/signal.length)
+
+    let maximums=findMaxima(signal_envelope,Math.ceil(win2*fsnew))
+    let peaks_ammount=0;
+    for(i in maximums){
+        if(maximums[i].value>min_sound_value){
+            peaks_ammount=peaks_ammount+1
+        }
+    }
+    return peaks_ammount
+}
+
+function powrate(Signal,fs){
+    let F2=0;
+    let min=100000000
+    let max=-100000000
+    for (let i=0;i<Signal.length;i++) {
+        Signal[i]=Signal[i]**2
+        if (Signal[i] < min) min = Signal[i];
+        else if (Signal[i] > max) max = Signal[i];
+    }
+    for(let i=0;i<Signal.length;i++){
+        Signal[i]=Math.abs(Signal[i]/max)
+    }
+    let b=[0.1262*10**-4,    0.2525*10**-4,    0.1262*10**-4]
+    let a=[1.0000,   -1.9899,    0.9900]
+
+
+
+    let Signal_Envelope=norm_cuadratic_signal(Signal.slice())
+    let win=0.1
+    let step=0.01
+    let data_r=short_time_energy_axis(Signal_Envelope.slice(),win*fs,step*fs,fs)
+    Signal_Envelope=data_r.E
+
+    let t=data_r.axis_values;
+    for(let i=0;i<t.length;i++)
+        t[i]=t[i]/fs
+
+    max=max_array(Signal_Envelope)
+    for(let i=0;i<Signal_Envelope.length;i++){
+        Signal_Envelope[i]=Signal_Envelope[i]/max
+    }
+
+
+    let signal_len=Signal_Envelope.length;
+    let S_before=-10;
+
+    let S_posible_pico=-10;
+    let S_pico=-10;
+    let S_count_picks=-1;
+    let S_counter_picks=0;
+
+    let S_posible_valle=-10;
+
+    let S_valle=100;
+    let S_count_valleys=-1;
+    let S_counter_valleys=0;
+
+    let State=0;
+
+
+    let max_cough_len=0.00050 ;
+    let min_time_between_peaks=0.200;
+
+    let init_cough=0;
+    let init_p1=init_cough;
+    let end_p1=0;
+
+    let init_p2=end_p1;
+    let end_p2=0;
+
+    let init_p3=end_p2;
+    let end_p3=0;
+
+    let end_cough=end_p3;
+
+    let peak_offset=0.1;
+    let min_sound_value=0.05;
+    let end_cough_index=0;
+    let init_cough_index=0;
+
+    for(let kk=0;kk<signal_len;kk++){
+        switch(State){
+            case 0:
+                if(Signal_Envelope[kk]>min_sound_value){
+                    State=1;
+                    init_cough=t[kk];
+                    init_cough_index=kk;
+                    init_p1=init_cough;
+                }
+                break;
+            case 1:
+                if( Signal_Envelope[kk]> S_posible_pico +peak_offset)
+                   S_posible_pico=Signal_Envelope[kk];
+                else{
+                    if(S_counter_picks>S_count_picks) {
+
+                        S_pico=S_posible_pico;
+                        State=2;
+                        S_counter_picks=0;
+                    }
+                    else
+                       S_counter_picks=S_counter_picks+1;
+                }
+                break
+            case 2:
+
+                if(Signal_Envelope[kk]<S_pico*0.6){
+                    State=3;
+
+                    end_p1=t[kk];
+                    init_p2=end_p1;
+
+                    S_posible_pico=-10;
+                    S_pico=-10;
+                }
+                break
+            case 3:
+                if( Signal_Envelope[kk] > S_posible_valle)
+                    S_posible_valle=Signal_Envelope[kk];
+                else{
+                    if(S_counter_valleys>S_count_valleys){
+                        end_p2=t[kk] ;
+                        State=4;
+
+                        S_posible_valle=-10;
+                        S_valle=100;
+
+                        init_p3=end_p2;
+                        S_counter_valleys=0;
+                    }else
+                       S_counter_valleys=S_counter_valleys+1;
+                }
+                break;
+            case 4:
+
+                if(Signal_Envelope[kk]> S_posible_pico +peak_offset)
+                    S_posible_pico=Signal_Envelope[kk];
+                else{
+                    if(S_counter_picks>S_count_picks){
+                        S_pico=S_posible_pico;
+                        if(t[kk]-init_cough<max_cough_len)
+                            State=5;
+                        else{
+                            State=0;
+
+                            end_p3=t[kk];
+                            end_cough=end_p3;
+                            init_cough;
+                            end_cough;
+                            end_cough_index=kk;
+                            lengh_cough=end_cough-init_cough;
+                            if(lengh_cough>0.05){
+                                init_cough_index=Math.floor(t[init_cough_index]*fs)
+                                end_cough_index=Math.floor(t[end_cough_index]*fs)
+                                segment_cough=Signal.slice(init_cough_index,end_cough_index);
+                                NFFT = 2**nextpow2(segment_cough);
+                                segment_cough=segment_cough.concat(new Float32Array(NFFT-segment_cough.length).fill(0.0))
+
+                                let Y = real_fft(segment_cough)
+                                Y=Y.slice(0,NFFT/2+1)
+                                Sumpower=sum(Y.slice(1,4000))
+                                for(let i=0 ;i<Y.length;i++){
+                                    Y[i]=2*Math.abs(Y[i])/signal_len
+                                    Y[i]=Y[i]/Sumpower
+                                }
+                                F2=sum(Y.slice(1500,2250))/sum(Y.slice(1,750))
+
+                                return F2
+
+                            }
+
+                            init_cough=0;
+
+
+                            end_p1=0;
+
+                            end_p2=0;
+
+                            end_p3=0;
+
+                            init_cough_index=0;
+                        }
+                    }
+                    else
+                       S_counter_picks=S_counter_picks+1;
+                }
+                break
+            default:
+                break
+
+
+        }
+    }
+    return F2
+}
+
+function variance(signal){
+    let signal_mean=mean(signal)
+    let signal_variance=0
+    let signal_len=signal.length
+
+    for(let i of signal){
+        signal_variance=signal_variance+Math.pow(signal_mean-i,2)
+    }
+    signal_variance=signal_variance/signal_len
+
+    return signal_variance
+}
+
+function range(signal){
+    let range=max_array(signal)-min_array(signal)
+
+    return range
+}
+
+function autocorr_lag(y,p){
+    let mean1=mean(y)
+    let N=y.length
+    let ta= new Float64Array(p+1).fill(0.0)
+    ta[0]=1;
+    let yvar2=0;
+    for(i = 0;i<y.length;i++)
+        yvar2=yvar2+(y[i]-mean1)*(y[i]-mean1);
+    for(let i = 1;i<p;i++)
+        ta[i] = autocorr_k(y,i,mean1,yvar2,N)  ;
+    return ta
+
+}
+function autocorr_k(y,k,y_med,yvar2,N){
+    let cross_sum = new Float64Array(N-k).fill(0.0) ;
+    for( i = (k);i<N;i++)
+        cross_sum[i] = (y[i]-y_med)*(y[i-k]-y_med) ;
+    ta2 = sum(cross_sum) / yvar2 ;
+    return ta2
+}
+
+
+function sma_coarse(signal){
+
+
+    let sma_coarse_total=0;
+    for(let i=1;i<signal.length;i++){
+        sma_coarse_total=sma_coarse_total+Math.abs(signal[i-1]-signal[i]);
+    }
+    return sma_coarse_total
+}
+
+function sma_fine(signal,num_divisions){
+    let sma_fine_value=0
+    let signal_len=signal.length
+    let segment_len= Math.ceil(signal_len/num_divisions)
+    let possible_sma_fine=new Float32Array(num_divisions).fill(0)
+    for(let i=0;i<num_divisions;i++){
+        end_segment=segment_len*(i+1)
+
+        if(end_segment>signal_len-1)
+            end_segment=signal_len-1
+
+        possible_sma_fine[i]=sma_coarse(signal.slice(segment_len*(i),end_segment))
+    }
+    sma_fine_value=Math.max(...possible_sma_fine);
+    return sma_fine_value
+}
+
+function spec_mean(signal_fft,orig_len){
+    let N=signal_fft.real.length
+    let SpectReal=new Float32Array(N/2).fill(0.0);
+    for(i=0;i<N/2;i++){
+        SpectReal[i]=2*Math.sqrt(signal_fft.real[i]**2+signal_fft.imag[i]**2)/orig_len
+    }
+    return mean(SpectReal)
+}
+
+function ThirdMfcc(signal,fs){
+    let Mel_coefs=Mfcc(0,fs,40,fs,signal)
+
+    return Mel_coefs[3]
+}
+
+function norm_cuadratic_signal(x){
+
+    for(let i=0;i<x.length;i++){
+        x[i]=x[i]**2
+    }
+    let maxim=max_array(x);
+    for(let i=0;i<x.length;i++){
+        x[i]=(x[i])/maxim
+    }
+    return x
+
+}
+
+function max_array(x){
+    let max=-10000000000
+    for (let i=0;i<x.length;i++) {
+        if (x[i] > max) max = x[i];
+    }
+    return max
+}
+
+function min_array(x){
+
+    let min=10000000000
+    for (let i=0;i<x.length;i++) {
+        if (x[i] < min) min = x[i];
+    }
+    return min
+}
+function max_array_pos(x){
+    let max=-10000000000
+    let max_pos=0;
+    for (let i=0;i<x.length;i++) {
+        if (x[i] > max){
+            max_pos=[i]
+            max = x[i];
+        }
+    }
+    return max_pos
+}
+
+function nextpow2(x){
+
+    let m_pot=Math.ceil(Math.log2(x.length))
+    return m_pot
+
+}
+
+function sum(x){
+    let total=0;
+    for(let i=0;i<x.length;i++){
+        total=total + x[i]
+    }
+    return total
+}
+
+function operate_complex(A,B,type){
+    let result={
+        real:0,
+        imag:0
+    }
+    switch(type){
+        case 'SUM':
+            result.real=A.real+B.real
+            result.imag=A.imag+B.imag
+            return result
+        case 'DIF':
+            result.real=A.real-B.real
+            result.imag=A.imag-B.imag
+            return result
+        case 'MUL':
+            result.real=A.real*B.real-A.imag*B.imag
+            result.imag=A.real*B.imag+A.imag*B.real
+            return result
+        case 'DIV':
+            result.real=(A.real*B.real+A.imag*B.imag)/(B.real**2+B.imag**2)
+            result.imag=(A.imag*B.real-A.real*B.imag)/(B.real**2+B.imag**2)
+            return result
+    }
+}
+
+function new_complex(real,imag){
+    return {
+        real:real,
+        imag:imag
+    }
+}
+
+function getCol(matrix, col){
+    var column = [];
+    for(var i=0; i<matrix.length; i++){
+       column.push(matrix[i][col]);
+    }
+    return column;
+}
+
+function multiply_matrix(matrix,k_constant){
+    if(matrix.length>0){
+
+        for(let i=0;i<matrix.length;i++){
+            matrix[i]=matrix[i]*k_constant
+        }
+    }
+    return matrix
+}
+
+function findMaxima(f,step){
+    countMaxima=0
+    Maxima=[]
+    for (let i=0;i<f.length-step;i++){
+        if (i>step){
+
+            if (( mean(f.slice(i-step,i-1))< f[i]) && ( mean(f.slice(i+1,i+step))< f[i]))  {
+
+                countMaxima = countMaxima + 1;
+                Maxima.push({"pos":i,"value":f[i]})
+            }
+        }else{
+            if(i==0){
+                if ( mean(f.slice(i+1,i+step))< f[i]){
+                    countMaxima = countMaxima + 1;
+                    Maxima.push({"pos":i,"value":f[i]})
+                }
+            }else{
+                if (( mean(f.slice(0,i))<= f[i]) && ( mean(f.slice(i+1,i+step))< f[i])){
+                    countMaxima = countMaxima + 1;
+                    Maxima.push({"pos":i,"value":f[i]})
+                }
+            }
+        }
+    }
+    let countNewMaxima=0;
+    let MaximaNew=[];
+    let i=-1;
+    let f_mean=mean(f)
+    while(i<countMaxima-1){
+
+        i = i + 1;
+        curMaxima = Maxima[i].pos;
+        curMavVal = Maxima[i].value;
+        tempMax = [Maxima[i].pos];
+        tempVals = [Maxima[i].value];
+
+        while ((i<countMaxima-1) && ( Maxima[i+1].pos - tempMax[tempMax.length-1] < step / 2)){
+
+            tempMax.push(Maxima[i].pos)
+            tempVals.push(Maxima[i].value)
+            i = i + 1;
+
+        }
+        let MI=max_array_pos(tempVals);
+        let MM=tempVals[MI]
+
+        if(MM>f_mean*0.02){
+            countNewMaxima=countNewMaxima+1
+            MaximaNew.push({"pos":tempMax[MI],"value":f[tempMax[MI]]})
+        }
+
+    }
+    return MaximaNew
+
+}
+
+function filtro_butter_z(u,a,b){
+
+    let ord=a.length-1
+    a=a.slice(1,a.length);
+    let y=new Float32Array(u.length).fill(0.0);
+    let x=new Float32Array(ord).fill(0.0);
+
+    for(let i=0;i<u.length;i++){
+        y[i]=b[0]*u[i]+x[0];
+        x2=new Float32Array(ord).fill(0.0);
+        x2[0]=x[1]
+        x=x2.slice()
+        for(let kk=1;kk<b.length;kk++){
+            x[kk-1]=x[kk-1]+b[kk]*u[i]-a[kk-1]*y[i];
+        }
+    }
+
+    return y
+}
+function detect_over_under_flow(x){
+    var MAX_INT = Math.pow(2, 53) -1;
+    var MIN_INT = -MAX_INT;
+    if(x>MAX_INT){
+        return "over"
+
+    }else if(x<MIN_INT){
+        return "under"
+    }else{
+        return "ok"
+    }
+}
+function filtro_butter_zorig(x,a,b){
+    let n=a.length;
+    let w=new Float32Array(n-1).fill(0.0)
+    let y=new Float32Array(x.length).fill(0.0)
+    for(let m=0;m<x.length;m++){
+        y[m]=(b[0]*x[m]+w[0])/a[0]
+        for(let kk=0;kk<n-2;kk++){
+            w[kk]=b[kk+1]*x[m]+w[kk+1]-a[kk+1]*y[m]
+        }
+        w[n-2]=b[n-1]*x[m]-a[n-1]*y[m]
+    }
+    return y
+}
+
+function real_fft(real) {
+    let imag=new Float32Array(real.length).fill(0.0);
+    transformRadix2(real,imag)
+    for(let i=0;i<real.length;i++)
+        real[i]=Math.sqrt(real[i]**2+imag[i]**2)
+    return real
+}
+
+function transformRadix2(real,imag) {
+
+	var n = real.length;
+	if (n == 1)
+		return;
+	var levels = -1;
+	for (var i = 0; i < 32; i++) {
+		if (1 << i == n)
+			levels = i;
+	}
+	if (levels == -1)
+		throw "Length is not a power of 2";
+
+	var cosTable = new Float32Array(n / 2);
+	var sinTable = new Float32Array(n / 2);
+	for (var i = 0; i < n / 2; i++) {
+		cosTable[i] = Math.cos(2 * Math.PI * i / n);
+		sinTable[i] = Math.sin(2 * Math.PI * i / n);
+	}
+
+	for (var i = 0; i < n; i++) {
+		var j = reverseBits(i, levels);
+		if (j > i) {
+			var temp = real[i];
+			real[i] = real[j];
+			real[j] = temp;
+			temp = imag[i];
+			imag[i] = imag[j];
+			imag[j] = temp;
+		}
+	}
+
+	for (var size = 2; size <= n; size *= 2) {
+		var halfsize = size / 2;
+		var tablestep = n / size;
+		for (var i = 0; i < n; i += size) {
+			for (var j = i, k = 0; j < i + halfsize; j++, k += tablestep) {
+				var l = j + halfsize;
+				var tpre =  real[l] * cosTable[k] + imag[l] * sinTable[k];
+				var tpim = -real[l] * sinTable[k] + imag[l] * cosTable[k];
+				real[l] = real[j] - tpre;
+				imag[l] = imag[j] - tpim;
+				real[j] += tpre;
+				imag[j] += tpim;
+			}
+		}
+	}
+
+	function reverseBits(val, width) {
+		var result = 0;
+		for (var i = 0; i < width; i++) {
+			result = (result << 1) | (val & 1);
+			val >>>= 1;
+		}
+		return result;
+    }
+
+}
+
+function sin_signal(fs,seconds){
+    let sin_signal_len=seconds*fs
+    let sin_signal=get_ascen_integers_from_n_to_m(0,sin_signal_len-1)
+    for(let i=0;i<sin_signal.length;i++)
+        sin_signal[i]=Math.sin(2*Math.PI*sin_signal[i]/fs)
+    return sin_signal;
+}
+
+function sin_signallen(fs,sin_signal_len){
+    let sin_signal=get_ascen_integers_from_n_to_m(0,sin_signal_len-1)
+    for(let i=0;i<sin_signal.length;i++)
+        sin_signal[i]=Math.sin(2*Math.PI*sin_signal[i]/fs)
+    return sin_signal;
+}
+function extractSilence(signal,fs){
+
+    let signal_no_silence=[];
+
+    const win_seconds=0.100
+    const step_seconds=0.050
+    let win_frames=0
+    let step_frames=0
+    let weight=5;
+
+    win_frames=win_seconds*fs
+    step_frames=step_seconds*fs
+    let E=short_time_energy(signal.slice(),win_frames,step_frames)
+    let C=spectral_centroid(signal.slice(),win_frames,step_frames,fs)
+
+    let E2=medinfilter1(E.slice(),5)
+    E2=medinfilter1(E2.slice(),5)
+
+
+    let C2=medinfilter1(C.slice(),5)
+
+    C2=medinfilter1(C2.slice(),5)
+
+    let E_H= histogram(E2.slice(),Math.round(E2.length/10))
+    let E_MAX=findMaxima(E_H.counts.slice(),4)
+
+
+    let C_H=histogram(C2.slice(),Math.round(C2.length/10))
+    let C_MAX=findMaxima(C_H.counts.slice(),4)
+    let T_E=0
+    let T_C=0
+    let audio_frames = new Float32Array(E2.length).fill(false);
+
+    if(E_MAX.length>=2)
+        T_E = (weight*E_H.values[E_MAX[0].pos]+E_H.values[E_MAX[1].pos]) / (weight+1);
+    else{
+
+        let E2_mean=mean(E2.slice())
+        T_E=E2_mean/2
+    }
+
+    if(C_MAX.length>=2)
+        T_C = (weight*C_H.values[C_MAX[0].pos]+C_H.values[C_MAX[1].pos]) / (weight+1);
+    else{
+
+        let C2_mean=mean(C2.slice())
+        T_C=C2_mean/2
+    }
+    let WIN=5
+    let limits=[]
+    let sound_frames=0,sound=false
+    let limit1=-1,limit2=-1,limit1_before=-1,limit2_before=-1;
+
+    for(let i=0;i<E2.length;i++){
+        if(E2[i]>=T_E && C2[i]>=T_C){
+            if(limit1<0){
+                limit1 = Math.round((i-WIN+1)*step_seconds*fs)
+                if(limit1<0){
+                    limit1=0
+                }
+                sound_frames+=1
+            }
+            audio_frames[i]=!audio_frames[i]
+
+        }else{
+            if(limit1>=0){
+                limit2=Math.round((i+WIN+1)*step_seconds*fs)
+                if (limit2>=signal.length){
+                    limit2 = signal.length-1;
+                }
+                if(limit1_before>=0 & limit2_before>=0){
+                    if(limit1<=limit2_before){
+                        limits[limits.length-1]["end"]=limit2
+                        limit1_before=limits[limits.length-1]["init"]
+                    }else{
+                        limits.push({
+                            init:limit1,
+                            end:limit2
+                        })
+                        limit1_before=limit1
+                    }
+                }else{
+                    limits.push({
+                        init:limit1,
+                        end:limit2
+                    })
+                    limit1_before=limit1
+                }
+                limit2_before=limit2
+                limit1=-1
+                limit2=-1
+            }
+        }
+    }
+
+    for(let i=0;i<limits.length;i++){
+        signal_no_silence=signal_no_silence.concat(signal.slice(limits[i].init,limits[i].end));
+    }
+    return signal_no_silence;
+
+}
+
+function histogram(data, bins) {
+    let data_sorted=data.sort()
+    let min = data_sorted[0];
+    let max = data_sorted[data_sorted.length-1];
+    let bins_count=new Float32Array(bins).fill(0)
+    let bins_value = new Float32Array(bins).fill(0);
+    let step=(max-min)/bins
+    let data_counter=0
+    for (let i=0; i<bins;i++) {
+        bins_value[i]=min+step*(i+1)
+        while(data_sorted[data_counter]<bins_value[i]){
+            bins_count[i]=bins_count[i]+1
+            data_counter=data_counter+1
+        }
+    }
+    let to_return={
+        "counts":bins_count,
+        "values":bins_value
+    }
+
+    return to_return;
+}
+
+function mean(numbers) {
+    var total = 0, i;
+    for (i = 0; i < numbers.length; i += 1) {
+        total += numbers[i];
+    }
+    return total / numbers.length;
+}
+
+function get_ascen_integers_from_n_to_m(n,m){
+    return new Float32Array([...Array(m+1).keys()].slice(n))
+}
+Float32Array.prototype.concat = function() {
+	var bytesPerIndex = 4,
+		buffers = Array.prototype.slice.call(arguments);
+
+	buffers.unshift(this);
+
+	buffers = buffers.map(function (item) {
+		if (item instanceof Float32Array) {
+			return item.buffer;
+		} else if (item instanceof ArrayBuffer) {
+			if (item.byteLength / bytesPerIndex % 1 !== 0) {
+				throw new Error('One of the ArrayBuffers is not from a Float32Array');
+			}
+			return item;
+		} else {
+			throw new Error('You can only concat Float32Array, or ArrayBuffers');
+		}
+	});
+
+	var concatenatedByteLength = buffers
+		.map(function (a) {return a.byteLength;})
+		.reduce(function (a,b) {return a + b;}, 0);
+
+	var concatenatedArray = new Float32Array(concatenatedByteLength / bytesPerIndex);
+
+	var offset = 0;
+	buffers.forEach(function (buffer, index) {
+		concatenatedArray.set(new Float32Array(buffer), offset);
+		offset += buffer.byteLength / bytesPerIndex;
+	});
+
+	return concatenatedArray;
+};
+function constan_matrix(dimensions, k_constant) {
+    var array = [];
+    for (var i = 0; i < dimensions[0]; ++i) {
+        array.push(dimensions.length == 1 ? k_constant : constan_matrix(dimensions.slice(1),k_constant));
+    }
+    return array;
+}
+
+function median(values){
+    if(values.length ==0) return 0;
+
+    values.sort(function(a,b){
+      return a-b;
+    });
+
+    var half = Math.floor(values.length / 2);
+
+    if (values.length % 2)
+      return values[half];
+
+    return (values[half - 1] + values[half]) / 2.0;
+}
+
+function medinfilter1(signal,order){
+    if(order<=1){
+        return signal
+    }
+    let order2= Math.floor(order/2)
+    order=2*order2+1
+    let m=[]
+
+
+    let signal0 = signal[0], signall = signal[signal.length-1];
+    for(i=0;i<order;i++){
+        aux1_s0=constan_matrix([1,i],signal0)[0]
+        aux1_sl=constan_matrix([1,order-i-1],signall)[0]
+        aux1_s0=aux1_s0.concat(signal)
+        aux1_s0=aux1_s0.concat(aux1_sl)
+        m[i]=aux1_s0
+
+    }
+    let aux_m = new Float32Array(m[0].length).fill(0);
+
+    for(i=0;i<m[0].length;i++){
+        aux_m[i]=median(getCol(m,i));
+    }
+
+    aux_m = aux_m.slice(order2,order2+signal.length);
+    return aux_m
+}
+
+function hamming_window(window_len){
+
+    let hamming = new Float32Array(window_len).fill(0);
+    for(n=0;n<window_len;n++){
+        hamming[n]=0.54 - 0.46 * Math.cos(2*Math.PI*(n/window_len))
+    }
+    return hamming
+
+}
+
+function sleep(milliseconds) {
+    const date = Date.now();
+    let currentDate = null;
+    do {
+        currentDate = Date.now();
+    } while (currentDate - date < milliseconds);
+}
+
+function spectral_centroid(signal,win_frames,step_frames,fs){
+    let L = signal.length;
+    let curframe=0
+    let numOfFrames = Math.floor((L-win_frames)/step_frames) + 1
+    let C = new Float32Array(numOfFrames).fill(0);
+    let H = hamming_window(win_frames);
+    let m_pot=1;
+    for(i=0;i<numOfFrames;i++){
+        window_frames=signal.slice(curframe, curframe+win_frames)
+
+        m_pot=Math.ceil(Math.log2(win_frames))
+        let window1=new Float32Array(Math.pow(2,m_pot)).fill(0.0);
+        let squared_sum=0;
+
+
+        for(kk=0;kk<win_frames;kk++){
+            window1[kk]=H[kk]*window_frames[kk]
+            squared_sum=squared_sum+window1[kk]**2
+        }
+        if(squared_sum<0.0010){
+            C[i]=0.0
+            curframe=curframe+step_frames
+            continue
+        }
+
+
+        let FFT_RES=real_fft(window1)
+        FFT_RES=FFT_RES.slice(0,win_frames)
+
+        let Max_value=Math.max(...FFT_RES)
+
+
+        let m = new Float32Array(FFT_RES.length).fill(0);
+        for(kk=1;kk<FFT_RES.length+1;kk++){
+            m[kk-1]=(fs/(2*FFT_RES.length))*kk
+        }
+
+        let TotalFFT=0;
+        for(kk=0;kk<FFT_RES.length;kk++){
+            FFT_RES[kk]=FFT_RES[kk]/Max_value
+            C[i]=C[i]+FFT_RES[kk]*m[kk]
+            TotalFFT=TotalFFT+FFT_RES[kk]
+        }
+        C[i]=C[i]/TotalFFT
+        C[i]=C[i]/ (fs/2);
+
+        curframe=curframe+step_frames
+    }
+    return C
+}
+function maxabs_scale_array(signal){
+
+    let max=max_array(signal)
+    let min=Math.abs(min_array(signal))
+
+    if(min>max)
+        max=min
+    for(let i=0;i<signal.length;i++){
+        signal[i]=signal[i]/max
+    }
+
+    return signal
+}
+
+function short_time_energy_axis(signal,win_frames,step_frames,fs){
+
+    signal=maxabs_scale_array(signal.slice())
+    let L = signal.length;
+    let curframe=0
+    let numOfFrames = Math.floor((L-win_frames)/step_frames) + 1
+    let E = new Float32Array(numOfFrames).fill(0);
+    let axis_values = new Float32Array(numOfFrames).fill(0);
+    for(i=0;i<numOfFrames-1;i++){
+        window_frames=signal.slice(curframe, curframe+win_frames)
+        for(kk=0;kk<window_frames.length;kk++){
+            E[i]=E[i]+window_frames[kk]*window_frames[kk]
+        }
+        E[i]=E[i]/win_frames
+        axis_values[i]=curframe+(win_frames)/2
+        curframe=curframe+step_frames
+    }
+    let to_return={
+        E:E,
+        axis_values:axis_values
+    }
+    return to_return
+}
+
+function short_time_energy(signal,win_frames,step_frames){
+
+    signal=maxabs_scale_array(signal.slice())
+    let L = signal.length;
+    let curframe=0
+    let numOfFrames = Math.floor((L-win_frames)/step_frames) + 1
+    let E = new Float32Array(numOfFrames).fill(0);
+    for(i=0;i<numOfFrames-1;i++){
+        window_frames=signal.slice(curframe, curframe+win_frames)
+        for(kk=0;kk<window_frames.length;kk++){
+            E[i]=E[i]+window_frames[kk]*window_frames[kk]
+        }
+        E[i]=E[i]/win_frames
+        curframe=curframe+step_frames
+    }
+    return E
+}
+
+function MelFilterBank_Bins(f_init,f_end,filters_ammount,filter_length,fs){
+    let interval_ammount=filters_ammount+2
+    let mf_array=new Float32Array(interval_ammount).fill(0.0)
+    let f_array=new Float32Array(interval_ammount).fill(0.0)
+    let bins_array=new Float32Array(interval_ammount).fill(0.0)
+    let mf_init=FreqzToMel(f_init)
+    let mf_end=FreqzToMel(f_end)
+    let mstep=(mf_end-mf_init)/(interval_ammount-1)
+
+    for(let i=0;i<interval_ammount;i++){
+        mf_array[i]=mf_init+mstep*i
+        f_array[i]=MelToFreqz(mf_array[i])
+        bins_array[i]=Math.floor(((filter_length+1)*f_array[i])/(fs))
+
+    }
+
+    return bins_array
+}
+
+function Mfcc(f_init,f_end,filters_ammount,fs,signal_fft){
+
+    let signal_power=power_spectrum(signal_fft)
+    let energy=0;
+    signal_power=signal_power.slice(0,signal_power.length/2)
+
+    for(let kk=0;kk<signal_power.length;kk++){
+        energy=energy+signal_power[kk]
+    }
+
+    let filter_length =signal_power.length
+
+    let bins_array = MelFilterBank_Bins(f_init,f_end,filters_ammount,filter_length,fs)
+    let H=new Float32Array(filters_ammount).fill(0.0)
+    for(let i=1;i<=filters_ammount;i++){
+        let h=0,
+            f_before=bins_array[i-1],
+            f_now=bins_array[i],
+            f_after=bins_array[i+1]
+
+        for(let kk=0;kk<filter_length;kk++){
+            let h_aux=0;
+            if(kk<f_before){
+                continue
+            }else if(kk>=f_before && kk<f_now){
+                h_aux=(kk-f_before)/(f_now-f_before)
+            }else if(kk>=f_now && kk <= f_after){
+                h_aux=(f_after-kk)/(f_after-f_now)
+            }else{
+                continue
+            }
+            h=h+h_aux*signal_power[kk]
+        }
+        H[i-1]=Math.log(h)
+
+    }
+
+    H=dct(H,true)
+
+    H[0]=Math.log(energy)
+    return H
+}
+
+function dct(x, norm){
+    let result = new Float32Array(x.length).fill(0.0);
+    let N = x.length;
+    let sum = 0.0;
+    let scaling_factor0 = Math.sqrt(1 / (4 * N));
+    let scaling_factor = Math.sqrt(1 / (2 * N));
+    for (let k = 0; k < N; k++){
+      sum = 0.0;
+      for (let n = 0; n < N ; n++) {
+        sum += x[n] * Math.cos(Math.PI * k * (2 * n + 1)/(2 * N));
+      }
+      sum *= 2;
+      if (norm){
+        if (k == 0){
+          sum = sum * scaling_factor0;
+        } else {
+          sum = sum * scaling_factor;
+        }
+      }
+      result[k] = sum;
+    }
+    return result;
+}
+
+function FreqzToMel(f){
+    return 1127*Math.log(1+f/700)
+}
+
+function MelToFreqz(m){
+    return 700*(Math.exp(m/1127)-1)
+}
+function full_fft_pre_emphasis(signal){
+    let pre_emphasis=true;
+    let m_pot=nextpow2(signal)
+
+    let N=Math.pow(2,m_pot)
+    let imag=new Float32Array(N).fill(0.0);
+    let real=new Float32Array(N).fill(0.0);
+    let ham=hamming_window(N)
+    let init_value=0;
+    if(pre_emphasis){
+        let aux=0;
+        let alpha=0.97;
+        for(let i=0;i<signal.length;i++){
+            aux=signal[i]-alpha*init_value;
+            real[i]=aux
+            init_value=signal[i]
+        }
+    }else{
+
+        for(let i=0;i<signal.length;i++){
+            real[i]=ham[i]*signal[i]
+        }
+    }
+    transformRadix2(real,imag)
+    let to_return={
+        real:real,
+        imag:imag
+    }
+    return to_return
+}
+function power_spectrum(signal_fft) {
+    let aux2=0;
+    let power_spectrum_signal=new Float32Array(signal_fft.real.length).fill(0.0);
+    for(let i=0;i<signal_fft.real.length;i++){
+        aux2=signal_fft.real[i]**2
+        power_spectrum_signal[i]=(aux2+signal_fft.imag[i]**2)/signal_fft.real.length
+    }
+    return power_spectrum_signal
+
+}
+
+
+function fft(signal) {
+    m_pot=Math.ceil(Math.log2(signal.length))
+    let imag=new Float32Array(Math.pow(2,m_pot)).fill(0.0);
+    let real=new Float32Array(Math.pow(2,m_pot)).fill(0.0);
+
+    for(let i=0;i<signal.length;i++){
+
+        real[i]=signal[i]
+    }
+    transformRadix2(real,imag)
+
+    let to_return={
+        imag:imag,
+        real:real
+    }
+    return to_return
+}
+
+function fftnode_s(signal){
+    let N_orig=signal.length
+    let m_pot=Math.ceil(Math.log2(signal.length))
+    let N_2=Math.pow(2,m_pot)
+    let real= signal.concat(new Float32Array(N_2-N_orig).fill(0.0))
+    let imag=new Float32Array(real.length).fill(0.0);
+    let result=constan_matrix([N_2,2],0)
+    transformRadix2(real,imag)    
+    for(let i=0;i<real.length;i++){
+        result[i][0]=real[i]
+        result[i][1]=imag[i]
+    }
+    return result
+}
+
+function ifftnode_s(imag_real) {
+    let imag=getCol(imag_real,0)
+    let real=getCol(imag_real,1)
+    transformRadix2(imag,real)    
+    let result=constan_matrix([imag.length,2],0)
+    for(let i=0;i<real.length;i++){
+        result[i][0]=imag[i]/real.length
+        result[i][1]=real[i]/real.length
+    }
+    return result;
+}
+
+function ifft(real,imag) {
+    transformRadix2(imag,real)    
+    for(let i=0;i<real.length;i++){
+        real[i]=real[i]/real.length
+        imag[i]=imag[i]/real.length
+    }
+    return real;
+}
