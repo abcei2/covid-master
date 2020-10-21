@@ -58,8 +58,8 @@ dependencies:
   #rename: ^1.2.0
   buffer: ^1.0.7
   medcorder_audio: ^0.0.6
-  audio_graph: ^0.0.6
-  flutter_audio_capture: ^0.0.2
+  #audio_graph: ^0.0.6
+  #flutter_audio_capture: ^0.0.2
   data_connection_checker: ^0.3.4
   image_picker: ^0.6.7+4
   flutter_jscore: ^0.1.1
