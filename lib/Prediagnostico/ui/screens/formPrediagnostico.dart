@@ -137,7 +137,7 @@ class FormPrediagnosticoView extends State<FormPrediagnostico> {
       'label': 'ANTECEDENTES PATOLÓGICOS',
       'type': 'check',
       'values': ['Si', 'No'],
-      'msg': 'Enfermedad de base o condición preexistente.'
+      'msg': 'Enfermedad de base o condición preexistente como por ejemplo Hipertensión, Diabetes, Obesidad o Cáncer.'
     },
     {
       'id': 2,
@@ -151,6 +151,7 @@ class FormPrediagnosticoView extends State<FormPrediagnostico> {
       'label': 'ANTECEDENTES ALÉRGICOS',
       'type': 'check',
       'values': ['Si', 'No']
+      'msg': 'Se incluyen Asma, rinitis y otro tipos de alergías como por ejemplo alimentarias o a alérgenos aéreos.'
     },
     {
       'id': 4,
